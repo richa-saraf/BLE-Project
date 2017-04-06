@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		97A941421E86C68400784A92 /* UuidDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A941411E86C68400784A92 /* UuidDefinition.swift */; };
+		97A941481E86E25F00784A92 /* PeripheralViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A941471E86E25F00784A92 /* PeripheralViewController.swift */; };
 		97FC8A6F1E861E9900EAC552 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC8A6E1E861E9900EAC552 /* AppDelegate.swift */; };
 		97FC8A711E861E9900EAC552 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC8A701E861E9900EAC552 /* ViewController.swift */; };
 		97FC8A741E861E9900EAC552 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97FC8A721E861E9900EAC552 /* Main.storyboard */; };
@@ -35,6 +36,7 @@
 
 /* Begin PBXFileReference section */
 		97A941411E86C68400784A92 /* UuidDefinition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UuidDefinition.swift; sourceTree = "<group>"; };
+		97A941471E86E25F00784A92 /* PeripheralViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeripheralViewController.swift; sourceTree = "<group>"; };
 		97FC8A6B1E861E9900EAC552 /* TestCBApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestCBApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97FC8A6E1E861E9900EAC552 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		97FC8A701E861E9900EAC552 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -103,6 +105,7 @@
 				97FC8A751E861E9900EAC552 /* Assets.xcassets */,
 				97FC8A7A1E861E9900EAC552 /* Info.plist */,
 				97A941411E86C68400784A92 /* UuidDefinition.swift */,
+				97A941471E86E25F00784A92 /* PeripheralViewController.swift */,
 			);
 			path = TestCBApp;
 			sourceTree = "<group>";
@@ -259,6 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97A941481E86E25F00784A92 /* PeripheralViewController.swift in Sources */,
 				97FC8A711E861E9900EAC552 /* ViewController.swift in Sources */,
 				97A941421E86C68400784A92 /* UuidDefinition.swift in Sources */,
 				97FC8A6F1E861E9900EAC552 /* AppDelegate.swift in Sources */,
@@ -405,6 +409,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 2GPRV8DN9Y;
 				INFOPLIST_FILE = TestCBApp/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.richasaraf.TestCBApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -418,6 +423,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 2GPRV8DN9Y;
 				INFOPLIST_FILE = TestCBApp/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.richasaraf.TestCBApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
