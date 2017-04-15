@@ -10,21 +10,15 @@ import UIKit
 import CoreBluetooth
 
 struct DisplayPeripheral {
-    var peripheral: CBPeripheral?
-    var lastRSSI: NSNumber?
-    var localName: String?
+    var peripheral: CBPeripheral
+    var lastRSSI: NSNumber
+    var localName: String
+    //var profileImage: UIImage
 }
 
-class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, CBPeripheralManagerDelegate {
-
-    @IBOutlet weak var bleStatusLabel: UILabel!
+class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, CBPeripheralManagerDelegate,  UITableViewDataSource, UITableViewDelegate{
     
-    @IBOutlet weak var peripheralLabel: UILabel!
-    
-    @IBOutlet weak var periconnectLabel: UILabel!
-  
-    @IBOutlet weak var servicesLabel: UILabel!
-    
+    @IBOutlet weak var ScanTableView: UITableView!
     
     // Variable declaration
     var centralManager: CBCentralManager!
@@ -57,66 +51,58 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
     }
     
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return peripheral_array.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ScanTableViewCell", for: indexPath)
+        
+        cell.textLabel?.text = peripheral_array[indexPath.row].localName
+       cell.detailTextLabel?.text = String(describing: peripheral_array[indexPath.row].lastRSSI)
+        return cell
+    }
+    
     // CentralManagerDelegate methods
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOff:
-            bleStatusLabel.text = "Powered OFF"
+            print("Powered OFF")
         case .poweredOn:
-            bleStatusLabel.text = "Powered ON"
+            print("Powered ON")
         case .unsupported:
-            bleStatusLabel.text = "Unsupported"
+            print("Unsupported")
         case .unauthorized:
-            bleStatusLabel.text = "Unauthorized"
+            print("Unauthorized")
         case .unknown:
-            bleStatusLabel.text = "Unknown"
+            print("Unknown")
         case .resetting:
-            bleStatusLabel.text = "Resetting"
+            print("Resetting")
         }
-        
-        print("Bluetooth status: " + bleStatusLabel.text!)
     }
 
 
     @IBAction func startscanButton(_ sender: UIButton) {
         // Start scanning for peripherals
-        centralManager.scanForPeripherals(withServices: nil, options: nil)
-        //centralManager.scanForPeripherals(withServices: [self.ServiceUUID], options: nil)
+        centralManager.scanForPeripherals(withServices: [self.ServiceUUID], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
     }
-    
-    /*
-    // Peripherals discovered delegate function
-    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        
-        self.peripheral = peripheral
-        self.peripheral.delegate = self
-        
-        peripheralLabel.text = peripheral.name
-        print("Found peripheral \(peripheral.name)")
-        print("RSSI value: \(RSSI.decimalValue)")
-        
-        // Stop the scanning
-        centralManager.stopScan()
-        print("Stopped scanning for peripherals")
-        
-        // Connect to the peripheral
-        centralManager.connect(peripheral, options: nil)
-    }
- */
     
     // Peripherals discovered delegate function
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         
         for(index, foundPeripheral) in peripheral_array.enumerated() {
-            if foundPeripheral.peripheral?.identifier == peripheral.identifier {
+            if foundPeripheral.peripheral.identifier == peripheral.identifier {
                 peripheral_array[index].lastRSSI = RSSI
                 return
             }
         }
         
-        // let localName = advertisementData["kCBAdvDataLocalName"] as? String
         let localName = peripheral.name
-        let displayPeripheral = DisplayPeripheral(peripheral: peripheral, lastRSSI: RSSI, localName: localName)
+        let displayPeripheral = DisplayPeripheral(peripheral: peripheral, lastRSSI: RSSI, localName: localName!)
         peripheral_array.append(displayPeripheral)
         
         print("================================================")
@@ -124,19 +110,20 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         print("================================================")
         self.peripheral = peripheral
         self.peripheral.delegate = self
-        
+
+        ScanTableView.reloadData()
         // Connect to the peripheral
         centralManager.connect(peripheral, options: nil)
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        periconnectLabel.text = "Connected to \(peripheral.name)"
-        print("Connected to \(peripheral.name)")
-        //peripheral.discoverServices(nil)
+        if peripheral.name != nil {
+            print("Connected to \(peripheral.name!)")
+        }
+        peripheral.discoverServices(nil)
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        //periconnectLabel.text = "Could not connect"
         print("Failed to connect to \(peripheral.name)")
     }
     
@@ -146,31 +133,64 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if error != nil {
-            servicesLabel.text = "Failed to discover services" + error!.localizedDescription
-            
             print("Failed to discover services " + error!.localizedDescription)
             return
         }
         
         let services = peripheral.services
-        servicesLabel.text = "\(services)"
-        print("Services available: \(services)")
+        // print("Services available: \(services)")
         
-        for service in services! {
-            peripheral.discoverCharacteristics(nil, for: service)
+        for _service in services! {
+            if _service.uuid.isEqual(self.ServiceUUID) {
+                //print("Needed service found.")
+                peripheral.discoverCharacteristics(nil, for: _service)
+            }
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if error != nil {
-            bleStatusLabel.text = "Failed to discover characteristics" + error!.localizedDescription
             
             print("Failed to discover characterists " + error!.localizedDescription)
             return
         }
         
-        bleStatusLabel.text = "Characteristics discovered"
-        print("Characteristics available: \(service.characteristics)")
+        let characteristics = service.characteristics
+        
+        for _characteristic in characteristics!{
+            if _characteristic.uuid.isEqual(self.CharacteristicUUID) {
+                self.peripheral.readValue(for: _characteristic)
+            }
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        if error != nil {
+            print("Failed to read value " + error!.localizedDescription)
+            return
+        }
+        
+        guard let data = characteristic.value else {
+            return
+        }
+        
+        let datastring = NSString(data: data, encoding: String.Encoding.utf16.rawValue)
+        if datastring != nil {
+        print("Value: \(datastring!)")
+        }
+        
+        centralManager.cancelPeripheralConnection(peripheral)
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        if error != nil {
+            print("Failed to disconnect \(peripheral.name) " + error!.localizedDescription)
+            return
+        }
+        
+        if peripheral.name != nil {
+            print("Disconnected from \(peripheral.name!)")
+        }
     }
     
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
@@ -181,8 +201,6 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             print("P: Powered ON")
             self.addservice()
             self.advertise()
-            // start advertising
-        //peripheralManager.startAdvertising(:[self.service.uuid])
         case .unsupported:
             print("P: Unsupported")
         case .unauthorized:
@@ -212,10 +230,18 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         print("P: Started advertising!")
     }
     
+    func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
+        print("P: Received read request: \(request)")
+    }
+    
     func addservice() {
+        
+        let val_str = "Hello, World!"
+        //let cString = val_str.cString(using: .utf8)! // null-terminated
+        
         self.service = CBMutableService(type: self.ServiceUUID, primary: true)
         
-        self.characteristic = CBMutableCharacteristic(type: self.CharacteristicUUID, properties: CBCharacteristicProperties.read, value: nil, permissions: CBAttributePermissions.readable)
+        self.characteristic = CBMutableCharacteristic(type: self.CharacteristicUUID, properties: CBCharacteristicProperties.read, value: val_str.data(using: .utf16), permissions: CBAttributePermissions.readable)
         
         self.service.characteristics = [self.characteristic]
         
