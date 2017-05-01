@@ -240,7 +240,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        print("Inside didModifyServices function")
+        // print("Inside didModifyServices function")
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
@@ -269,25 +269,25 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     func startTimer() {
         startscanTimer = Timer.scheduledTimer(timeInterval: 5.0, target: self, selector: #selector(ViewController.stopTimer), userInfo: nil, repeats: true)
         //print("start scanning")
-        let d = Date()
-        let df = DateFormatter()
-        df.dateFormat = "H:m:ss"
-        print("\(df.string(from: d)) : start scanning")
+        //let d = Date()
+        //let df = DateFormatter()
+        //df.dateFormat = "H:m:ss"
+        //print("\(df.string(from: d)) : start scanning")
         startScan()
     }
     
     func stopTimer() {
-        let d = Date()
-        let df = DateFormatter()
-        df.dateFormat = "H:m:ss"
-        print("\(df.string(from: d)) : invalidate")
+        //let d = Date()
+        //let df = DateFormatter()
+        //df.dateFormat = "H:m:ss"
+        //print("\(df.string(from: d)) : invalidate")
         // Stop scanning for peripherals
         startscanTimer.invalidate()
         stopScan()
-        let d2 = Date()
+        //let d2 = Date()
         // Wait 10 seconds before scanning for peripherals
         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: {
-            print("\(df.string(from: d2)) : wait")
+            //print("\(df.string(from: d2)) : wait")
             self.startTimer()
         })
     }
@@ -298,9 +298,11 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     
     func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         if error != nil {
+            print("Error " + error!.localizedDescription)
             // The peripheral may not be available. Remove from array.
             for(index, deletePerioheral) in peripheral_array.enumerated() {
                 if deletePerioheral.peripheral.identifier == peripheral.identifier {
+                    print("Removing " + peripheral_array[index].localName)
                     peripheral_array.remove(at: index)
                     return
                 }
@@ -310,6 +312,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         for(index, foundperipheral) in peripheral_array.enumerated() {
             // Look for peripheral and update its RSSI.
             if foundperipheral.peripheral.identifier == peripheral.identifier {
+                print("Refreshing " + peripheral_array[index].localName)
                 peripheral_array[index].lastRSSI = RSSI
                 return
             }
@@ -317,8 +320,13 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     }
     
     func _updateRSSI() {
-        for(_, foundPeripheral) in peripheral_array.enumerated() {
+        for(index, foundPeripheral) in peripheral_array.enumerated() {
+            if foundPeripheral.peripheral.state == CBPeripheralState.connected {
                 foundPeripheral.peripheral.readRSSI()
+            } else {
+                print(foundPeripheral.localName + " status: \(foundPeripheral.peripheral.state.rawValue)")
+                peripheral_array.remove(at: index)
+            }
         }
         
         ScanTableView.reloadData()
