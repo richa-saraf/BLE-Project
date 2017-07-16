@@ -23,8 +23,8 @@ class PeripheralViewController : UIViewController, CBPeripheralManagerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.ServiceUUID = CBUUID(string: OL_Uuids.SERVICE_UUID)
-        self.CharacteristicUUID = CBUUID(string: OL_Uuids.CHARACTERISTIC_UUID)
+        self.ServiceUUID = CBUUID(string: OL_Uuids.OLink_SERVICE_UUID)
+        self.CharacteristicUUID = CBUUID(string: OL_Uuids.UserName_CHARACTERISTIC_UUID)
         
         peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
     }

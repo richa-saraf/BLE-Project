@@ -14,12 +14,16 @@ struct DisplayPeripheral {
     var lastRSSI: NSNumber
     var localName: String
     //var profileImage: UIImage
+    
+    var userName: String
 }
 
 class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, CBPeripheralManagerDelegate,  UITableViewDataSource, UITableViewDelegate{
     
     @IBOutlet weak var ScanTableView: UITableView!
     
+    @IBOutlet weak var profile_pic: UIImageView!
+        
     // Variable declaration
     var centralManager: CBCentralManager!
     var peripheral: CBPeripheral!
@@ -29,22 +33,37 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     
     // let deviceUUID = UIDevice.current.identifierForVendor
     var CharacteristicUUID: CBUUID!
+    var ProfileCharacteristicUUID: CBUUID!
     
     var peripheralManager: CBPeripheralManager!
     var service: CBMutableService!
     var characteristic: CBMutableCharacteristic!
+    var profileCharacteristic: CBMutableCharacteristic!
 
     var startscanTimer = Timer()
     var rssiTimer = Timer()
+    
+    var userNameBuffer: String!
+    
+    //var user_name: String = "This represents the SARAF family."
+    var user_name: String = "Prisha Saraf"
+    var EOM_msg: String = "EOM"
+    
+    var sendingEOM = false
+    var sendingUserData = false
+    
+    var sendDataIndex = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
         // UUID conversions
-        self.ServiceUUID = CBUUID(string: OL_Uuids.SERVICE_UUID)
+        self.ServiceUUID = CBUUID(string: OL_Uuids.OLink_SERVICE_UUID)
         
-        self.CharacteristicUUID = CBUUID(string: OL_Uuids.CHARACTERISTIC_UUID)
+        self.CharacteristicUUID = CBUUID(string: OL_Uuids.UserName_CHARACTERISTIC_UUID)
+        
+        self.ProfileCharacteristicUUID = CBUUID(string: OL_Uuids.Profile_CHARACTERISTIC_UUID)
         
         //Initialize Central Manager
         centralManager = CBCentralManager(delegate: self, queue: DispatchQueue.main)
@@ -78,6 +97,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             print("Powered ON")
             startTimer()
             updateRSSI()
+            // profile_pic.image = UIImage(named: "Prisha_profile.jpg")
         case .unsupported:
             print("Unsupported")
         case .unauthorized:
@@ -87,12 +107,6 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         case .resetting:
             print("Resetting")
         }
-    }
-
-
-    @IBAction func startscanButton(_ sender: UIButton) {
-        // Start scanning for peripherals
-        centralManager.scanForPeripherals(withServices: [self.ServiceUUID], options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
     }
     
     func startScan() {
@@ -111,7 +125,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         }
         
         let localName = peripheral.name ?? "No Name"
-        let displayPeripheral = DisplayPeripheral(peripheral: peripheral, lastRSSI: RSSI, localName: localName)
+        let displayPeripheral = DisplayPeripheral(peripheral: peripheral, lastRSSI: RSSI, localName: localName, userName: "")
         peripheral_array.append(displayPeripheral)
         
         print("================================================")
@@ -129,6 +143,8 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         if peripheral.name != nil {
             print("Connected to \(peripheral.name!)")
         }
+        
+        userNameBuffer = ""
         peripheral.discoverServices(nil)
     }
     
@@ -147,11 +163,9 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         }
         
         let services = peripheral.services
-        // print("Services available: \(services)")
         
         for _service in services! {
             if _service.uuid.isEqual(self.ServiceUUID) {
-                //print("Needed service found.")
                 peripheral.discoverCharacteristics(nil, for: _service)
             }
         }
@@ -168,8 +182,15 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         
         for _characteristic in characteristics!{
             if _characteristic.uuid.isEqual(self.CharacteristicUUID) {
-                self.peripheral.readValue(for: _characteristic)
+                //print("Will be reading user name value.")
+                self.peripheral.setNotifyValue(true, for: _characteristic)
+                //self.peripheral.readValue(for: _characteristic)
             }
+            
+            //if _characteristic.uuid.isEqual(self.ProfileCharacteristicUUID) {
+              //  print("Will be reading profile image value.")
+                //self.peripheral.readValue(for: _characteristic)
+            //}
         }
     }
     
@@ -179,15 +200,46 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             return
         }
         
+        // Check if the value field is not null
         guard let data = characteristic.value else {
             return
         }
         
-        let datastring = NSString(data: data, encoding: String.Encoding.utf16.rawValue)
-        if datastring != nil {
-        print("Value: \(datastring!)")
+        // Get the length of the data received.
+        //let dataLength = data.count
+        
+        if characteristic.uuid == CharacteristicUUID {
+            // Extract user name 
+            //let datastring = NSString(data: data, encoding: String.Encoding.utf16.rawValue)
+            guard let datastring = String(data: data, encoding: String.Encoding(rawValue:String.Encoding.utf8.rawValue)) else {
+                return
+            }
+            
+            print("Value Received: \(datastring)")
+            
+            if (datastring == "EOM") {
+                print("Full message received: \(userNameBuffer)")
+                self.peripheral.setNotifyValue(false, for: self.characteristic)
+                for(index, foundPeripheral) in peripheral_array.enumerated() {
+                    if foundPeripheral.peripheral.identifier == peripheral.identifier {
+                        peripheral_array[index].userName = userNameBuffer
+                        print(peripheral_array)
+                        return
+                    }
+                }
+            } else {
+                userNameBuffer.append(datastring)
+            }
+            
         }
         
+        //if characteristic.uuid == ProfileCharacteristicUUID {
+            // Extract profile image here
+          //  let dataimage = UIImage(data: data)
+            //print("Total bytes received for image: \(dataLength)")
+            //profile_pic.image = dataimage
+        //}
+
         //centralManager.cancelPeripheralConnection(peripheral)
     }
     
@@ -240,24 +292,136 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        // print("Inside didModifyServices function")
     }
     
     func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
         print("P: Received read request: \(request)")
     }
     
+    // Function to send data
+    func sendData(peripheral: CBPeripheralManager) {
+        
+        let val_str_encoded = user_name.data(using: .utf8)
+        let eom_msg = EOM_msg.data(using: .utf8)
+        
+        // Firstly, check if we need to send eom message
+        if (sendingEOM) {
+            
+            // send it
+            let didSend = peripheral.updateValue(eom_msg!, for: self.characteristic, onSubscribedCentrals: nil)
+            
+            // Did it send?
+            if (didSend) {
+                
+                // It did, so mark it as sent
+                sendingEOM = false
+                sendingUserData = false
+            }
+            
+            // It didn't send, so we'll exit and wait for peripheralManagerIsReadyToUpdateSubscribers to call sendData again
+            return;
+        }
+        
+        // We're not sending an EOM, so we're sending data
+        
+        // Is there any left to send?
+        
+        if sendDataIndex >= (val_str_encoded?.count)! {
+            
+            // No data left.  Do nothing
+            return
+        }
+        
+        // There's data left, so send until the callback fails, or we're done.
+        
+        var didSend = true
+        var chunk:Data
+        
+        while (didSend) {
+            
+            sendingUserData = true
+            
+            // Make the next chunk
+            
+            // Work out how big it should be
+            var amountToSend = min((val_str_encoded?.count)! - sendDataIndex, MTU)
+            
+            // Copy out the data we want
+            chunk = (val_str_encoded?.subdata(in: sendDataIndex..<sendDataIndex+amountToSend))!
+            
+            // Send it
+            didSend = peripheral.updateValue(chunk, for: self.characteristic, onSubscribedCentrals: nil)
+            
+            // If it didn't work, drop out and wait for the callback
+            if (!didSend) {
+                return;
+            }
+            
+            // Update the index
+            self.sendDataIndex += amountToSend
+            
+            // Was it the last one?p
+            if sendDataIndex >= (val_str_encoded?.count)! {
+                
+                // It was - send an EOM
+                
+                // Set this so if the send fails, we'll send it next time
+                sendingEOM = true
+                
+                // Send it
+                let eomSent = peripheral.updateValue(eom_msg!, for: self.characteristic, onSubscribedCentrals: nil)
+                
+                if (eomSent) {
+                    // It sent, we're all done
+                    sendingEOM = false
+                    sendingUserData = false
+                }
+                
+                return;
+            }
+        }
+    }
+    
+    func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
+        print("Ready to update subscribers")
+        self.sendData(peripheral: peripheral)
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
+        print("Sending data")
+        
+        self.sendData(peripheral: peripheral)
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
+        print("Unsubscribed!")
+    }
+    
     func addservice() {
         
-        let val_str = "Hello, World!"
-        //let cString = val_str.cString(using: .utf8)! // null-terminated
+        // let val_str = "Hello, my name is Richa Saraf! I love this world. I want to check the send limit of the text and see till which point this message is received. I would be surprised if I can see this entire line at the receiver!"
         
+        //if let image_to_send = UIImage(named: "Prisha_profile.jpg") {
+          //  if let image_data:Data = UIImageJPEGRepresentation(image_to_send, 1.0) {
+            //    self.profileCharacteristic = CBMutableCharacteristic(type: self.ProfileCharacteristicUUID, properties: CBCharacteristicProperties.read, value: image_data, permissions: CBAttributePermissions.readable)
+            //} else {
+              //  print("The compression failed.")
+            //}
+        //} else {
+          //  print("Could not fetch picture from the asset library.")
+        //}
+    
         self.service = CBMutableService(type: self.ServiceUUID, primary: true)
         
-        self.characteristic = CBMutableCharacteristic(type: self.CharacteristicUUID, properties: CBCharacteristicProperties.read, value: val_str.data(using: .utf16), permissions: CBAttributePermissions.readable)
+        self.characteristic = CBMutableCharacteristic(type: self.CharacteristicUUID, properties: CBCharacteristicProperties.notify, value: nil, permissions: CBAttributePermissions.readable)
+        
+        //self.characteristic = CBMutableCharacteristic(type: self.CharacteristicUUID, properties: CBCharacteristicProperties.read, value: val_str.data(using: .utf16), permissions: CBAttributePermissions.readable)
+        
+        //self.profileCharacteristic = CBMutableCharacteristic(type: self.ProfileCharacteristicUUID, properties: CBCharacteristicProperties.read, value: default_image, permissions: CBAttributePermissions.readable)
+        
+        //self.service.characteristics = [self.characteristic, self.profileCharacteristic]
         
         self.service.characteristics = [self.characteristic]
-        
         peripheralManager.add(self.service)
     }
     
